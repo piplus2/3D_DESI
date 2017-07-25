@@ -107,12 +107,14 @@ for rep = 1:NUM_REP
     
     % Scale train-validation and test (THIS IS NECESSARY SINCE RBM REQUIRES
     % BERNOULLI-DISTRIBUTED INPUTS)
-    disp('...applying Bernoulli scaling');
-    M = min(xtrain.samples(:));
-    R = range(xtrain.samples(:));
-    xtrain.samples = (xtrain.samples - M) / R;
-    xval.samples = (xval.samples - M) / R;
-    xtest.samples = (xtest.samples - M) / R;
+    disp('...applying MinMax scaling');
+    m = min(xtrain.samples, [], 2); M = max(xtrain.samples, [], 2);
+    xtrain.samples = bsxfun(@rdivide, bsxfun(@minus, xtrain.samples, m), M-m);
+    m = min(xval.samples, [], 2); M = max(xval.samples, [], 2);
+    xval.samples = bsxfun(@rdivide, bsxfun(@minus, xval.samples, m), M-m);
+    m = min(xtest.samples, [], 2); M = max(xtest.samples, [], 2);
+    xtest.samples = bsxfun(@rdivide, bsxfun(@minus, xtest.samples, m), M-m);
+    clear m M
     
     % Define the topology of parametric t-SNE network
     max_iter = 500;
@@ -174,7 +176,12 @@ for rep = 1:NUM_REP
         int2str(rep), '.mat'], 'knn_accuracy_tsne');
     
     % Map all the data in the low-dimensional manifold
-    X = (X - M) / R; % First apply Bernoulli scaling
+    X = data.Y;
+    m = min(X, [], 2);
+    M = max(X, [], 2);
+    X = bsxfun(@rdivide, bsxfun(@minus, X, m), M-m); % First MinMax scaling
+    clear m M
+    
     mapped_X = run_data_through_network(network, X);
     
     % Save the network and the mapped data
@@ -182,5 +189,7 @@ for rep = 1:NUM_REP
         int2str(rep), '.mat'], 'network');
     save(['../results_/all_data/mapped_data_repetition_', ...
         int2str(rep), '.mat'], 'mapped_X');
+        
+    clear X mapped_X
     
 end
